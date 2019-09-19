@@ -1,0 +1,7 @@
+version: "2"
+domain: projectriff.io
+repo: github.com/trisberg/binding
+resources:
+- group: binding
+  version: v1alpha1
+  kind: SecretMapping
