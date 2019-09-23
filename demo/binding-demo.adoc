@@ -1,0 +1,198 @@
+riff service binding demo for Spring Boot apps
+==============================================
+
+= Introduction
+
+This demo depends on an experimental binding CRD and controller and a modified riff CLI that is provided in this demo directory.
+
+CRD and Controller: https://github.com/trisberg/binding
+
+Modified CLI: https://github.com/trisberg/cli/tree/demo-binding-cli
+
+= Setup
+
+=== Clone this repo
+
+----
+git clone https://github.com/trisberg/binding.git
+----
+
+=== Change to the demo directory and set up PATH
+
+----
+cd binding/demo
+export PATH=$PWD:$PATH
+----
+
+=== Install riff
+
+See: https://projectriff.io/docs/v0.5/getting-started
+
+=== Install Helm v2
+
+See: https://helm.sh/docs/using_helm/#installing-helm
+
+=== Install binding CRD and controller
+
+----
+kubectl apply -f ./riff-binding-0.0.1-snapshot.yaml
+----
+
+= Demo
+
+=== Create application
+
+----
+$ riff application create petclinic \
+>   --git-repo https://github.com/spring-projects/spring-petclinic.git \
+>   --git-revision master
+Created application "petclinic"
+----
+
+=== Install the database using Helm
+
+----
+$ helm install --name petclinic --set mysqlDatabase=petclinic stable/mysql
+NAME:   petclinic
+LAST DEPLOYED: Mon Sep 23 16:07:43 2019
+NAMESPACE: default
+STATUS: DEPLOYED
+
+RESOURCES:
+==> v1/ConfigMap
+NAME                  DATA  AGE
+petclinic-mysql-test  1     0s
+
+==> v1/PersistentVolumeClaim
+NAME             STATUS   VOLUME    CAPACITY  ACCESS MODES  STORAGECLASS  AGE
+petclinic-mysql  Pending  standard  0s
+
+==> v1/Pod(related)
+NAME                              READY  STATUS   RESTARTS  AGE
+petclinic-mysql-54f74655dd-gdzvd  0/1    Pending  0         0s
+
+==> v1/Secret
+NAME             TYPE    DATA  AGE
+petclinic-mysql  Opaque  2     0s
+
+==> v1/Service
+NAME             TYPE       CLUSTER-IP    EXTERNAL-IP  PORT(S)   AGE
+petclinic-mysql  ClusterIP  10.11.246.74  <none>       3306/TCP  0s
+
+==> v1beta1/Deployment
+NAME             READY  UP-TO-DATE  AVAILABLE  AGE
+petclinic-mysql  0/1    1           0          0s
+
+
+NOTES:
+MySQL can be accessed via port 3306 on the following DNS name from within your cluster:
+petclinic-mysql.default.svc.cluster.local
+
+To get your root password run:
+
+    MYSQL_ROOT_PASSWORD=$(kubectl get secret --namespace default petclinic-mysql -o jsonpath="{.data.mysql-root-password}" | base64 --decode; echo)
+
+To connect to your database:
+
+1. Run an Ubuntu pod that you can use as a client:
+
+    kubectl run -i --tty ubuntu --image=ubuntu:16.04 --restart=Never -- bash -il
+
+2. Install the mysql client:
+
+    $ apt-get update && apt-get install mysql-client -y
+
+3. Connect using the mysql cli, then provide your password:
+    $ mysql -h petclinic-mysql -p
+
+To connect to your database directly from outside the K8s cluster:
+    MYSQL_HOST=127.0.0.1
+    MYSQL_PORT=3306
+
+    # Execute the following command to route the connection:
+    kubectl port-forward svc/petclinic-mysql 3306
+
+    mysql -h ${MYSQL_HOST} -P${MYSQL_PORT} -u root -p${MYSQL_ROOT_PASSWORD}
+    
+----
+
+=== Create SecretMapping
+
+----
+$ riff binding secret-mapping create petclinic \
+>   --binding-secret petclinic-binding \
+>   --binding-prefix 'spring.datasource' \
+>   --uri 'mysql://petclinic-mysql.default.svc.cluster.local:3306/petclinic' \
+>   --secret-ref petclinic-mysql \
+>   --username root \
+>   --password-key mysql-root-password
+secretmapping.binding.projectriff.io/petclinic created
+----
+
+=== Create core deployer
+
+----
+$ riff core deployer create petclinic \
+>   --application-ref petclinic \
+>   --env SPRING_DATASOURCE_INITIALIZATION_MODE=always \
+>   --binding-secret petclinic-binding:application-mysql \
+>   --tail
+Created deployer "petclinic"
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:               |\      _,,,--,,_
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:              /,`.-'`'   ._  \-;;,_
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:   _______ __|,4-  ) )_   .;.(__`'-'__     ___ __    _ ___ _______
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:  |       | '---''(_/._)-'(_\_)   |   |   |   |  |  | |   |       |
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:  |    _  |    ___|_     _|       |   |   |   |   |_| |   |       | __ _ _
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:  |   |_| |   |___  |   | |       |   |   |   |       |   |       | \ \ \ \
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:  |    ___|    ___| |   | |      _|   |___|   |  _    |   |      _|  \ \ \ \
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:  |   |   |   |___  |   | |     |_|       |   | | |   |   |     |_    ) ) ) )
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:  |___|   |_______| |___| |_______|_______|___|_|  |__|___|_______|  / / / /
+default/petclinic-deployer-6dc7958c-tmk2w[handler]:  ==================================================================/_/_/_/
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: :: Built with Spring Boot :: 2.1.6.RELEASE
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:48.815  WARN 1 --- [           main] pertySourceApplicationContextInitializer : Skipping 'cloud' property source addition because not in a cloud
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:48.819  WARN 1 --- [           main] nfigurationApplicationContextInitializer : Skipping reconfiguration because not in a cloud
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:48.841  INFO 1 --- [           main] o.s.s.petclinic.PetClinicApplication     : Starting PetClinicApplication on petclinic-deployer-6dc7958c-tmk2w with PID 1 (/workspace/BOOT-INF/classes started by cnb in /workspace)
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:48.842  INFO 1 --- [           main] o.s.s.petclinic.PetClinicApplication     : The following profiles are active: mysql
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:51.125  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data repositories in DEFAULT mode.
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:51.284  INFO 1 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 143ms. Found 4 repository interfaces.
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:52.305  INFO 1 --- [           main] trationDelegate$BeanPostProcessorChecker : Bean 'org.springframework.transaction.annotation.ProxyTransactionManagementConfiguration' of type [org.springframework.transaction.annotation.ProxyTransactionManagementConfiguration$$EnhancerBySpringCGLIB$$87dc6dc2] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:53.210  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port(s): 8080 (http)
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:53.280  INFO 1 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:53.285  INFO 1 --- [           main] org.apache.catalina.core.StandardEngine  : Starting Servlet engine: [Apache Tomcat/9.0.21]
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:53.649  INFO 1 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:53.652  INFO 1 --- [           main] o.s.web.context.ContextLoader            : Root WebApplicationContext: initialization completed in 4666 ms
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:54.443  INFO 1 --- [           main] org.ehcache.core.EhcacheManager          : Cache 'vets' created in EhcacheManager.
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:54.462  INFO 1 --- [           main] org.ehcache.jsr107.Eh107CacheManager     : Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=urn.X-ehcache.jsr107-default-config,Cache=vets
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:54.486  INFO 1 --- [           main] org.ehcache.jsr107.Eh107CacheManager     : Registering Ehcache MBean javax.cache:type=CacheStatistics,CacheManager=urn.X-ehcache.jsr107-default-config,Cache=vets
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:54.655  INFO 1 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:54.961  INFO 1 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:55.884  INFO 1 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 	name: default
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 	...]
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:55.965  INFO 1 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate Core {5.3.10.Final}
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:55.967  INFO 1 --- [           main] org.hibernate.cfg.Environment            : HHH000206: hibernate.properties not found
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:56.140  INFO 1 --- [           main] o.hibernate.annotations.common.Version   : HCANN000001: Hibernate Commons Annotations {5.0.4.Final}
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:56.351  INFO 1 --- [           main] org.hibernate.dialect.Dialect            : HHH000400: Using dialect: org.hibernate.dialect.MySQL5Dialect
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:57.510  INFO 1 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:57.996  INFO 1 --- [           main] o.h.h.i.QueryTranslatorFactoryInitiator  : HHH000397: Using ASTQueryTranslatorFactory
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:58.897  INFO 1 --- [           main] o.s.s.concurrent.ThreadPoolTaskExecutor  : Initializing ExecutorService 'applicationTaskExecutor'
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:58.986  WARN 1 --- [           main] aWebConfiguration$JpaWebMvcConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:59.759  INFO 1 --- [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 15 endpoint(s) beneath base path '/manage'
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:59.929  INFO 1 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:59.941  INFO 1 --- [           main] o.s.s.petclinic.PetClinicApplication     : Started PetClinicApplication in 12.287 seconds (JVM running for 13.256)
+----
+
+=== Set up port forwarding
+
+----
+kubectl port-forward service/square-deployer 8080:80
+----
+
+=== Access the Petclinic app
+
+Open http://localhost:8080 in your browser

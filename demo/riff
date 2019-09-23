@@ -1,0 +1,74 @@
+#!/bin/bash
+
+## MAIN SCRIPT ###
+group=$1
+object=$2
+command=$3
+bindingSecret=""
+bindingPrefix=""
+secretRef=""
+uri=""
+uriKey=""
+passwordKey=""
+username=""
+usernameKey=""
+host=""
+hostKey=""
+port=""
+portKey=""
+
+if [ $group == "binding" ] && [ $object == "secret-mapping" ]; then
+  if [ $command == "create" ]; then
+    shift 3
+    sm_name=$1
+    shift 1
+    flag=$1
+    value=$2
+    spec=""
+    while [ "$flag" != "" ]; do
+      if [ $flag == "--binding-secret" ]; then
+        spec=$spec"  bindingSecret: $value"$'\n'
+      elif [ $flag == "--binding-prefix" ]; then
+        spec=$spec"  bindingPrefix: $value"$'\n'
+      elif [ $flag == "--secret-ref" ]; then
+        spec=$spec"  secretRef: $value"$'\n'
+      elif [ $flag == "--uri" ]; then
+        spec=$spec"  uri: $value"$'\n'
+      elif [ $flag == "--uri-key" ]; then
+        spec=$spec"  uriKey: $value"$'\n'
+      elif [ $flag == "--password-key" ]; then
+        spec=$spec"  passwordKey: $value"$'\n'
+      elif [ $flag == "--username" ]; then
+        spec=$spec"  username: $value"$'\n'
+      elif [ $flag == "--username-key" ]; then
+        spec=$spec"  usernameKey: $value"$'\n'
+      elif [ $flag == "--host" ]; then
+        spec=$spec"  host: $value"$'\n'
+      elif [ $flag == "--host-key" ]; then
+        spec=$spec"  hostKey: $value"$'\n'
+      elif [ $flag == "--port" ]; then
+        spec=$spec"  port: $value"$'\n'
+      elif [ $flag == "--port-key" ]; then
+        spec=$spec"portKey: $value"$'\n'
+      fi
+      shift 2
+      flag=$1
+      value=$2
+    done
+    cat <<EOF | kubectl apply -f -
+apiVersion: binding.projectriff.io/v1alpha1
+kind: SecretMapping
+metadata:
+  name: $sm_name
+spec:
+$spec
+EOF
+  fi
+  if [ $command == "delete" ]; then
+    shift 3
+    sm_name=$1
+    kubectl delete secretmappings.binding.projectriff.io/$sm_name
+  fi
+else
+  riff-cli $@
+fi
