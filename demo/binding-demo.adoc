@@ -1,7 +1,7 @@
 riff service binding demo for Spring Boot apps
 ==============================================
 
-= Introduction
+== Introduction
 
 This demo depends on an experimental binding CRD and controller and a modified riff CLI that is provided in this demo directory.
 
@@ -9,7 +9,7 @@ CRD and Controller: https://github.com/trisberg/binding
 
 Modified CLI: https://github.com/trisberg/cli/tree/demo-binding-cli
 
-= Setup
+== Setup
 
 === Clone this repo
 
@@ -208,3 +208,27 @@ Forwarding from [::1]:8080 -> 8080
 === Access the Petclinic app
 
 Open http://localhost:8080 in your browser
+
+== Teardown
+
+.Delete resources
+----
+riff core deployer delete petclinic
+riff binding secret-mapping delete petclinic
+riff application delete petclinic
+helm delete --purge petclinic
+----
+
+.Uninstall riff-binding
+----
+kubectl delete -n riff-system deployment/riff-binding-controller-manager
+kubectl delete -n riff-system service/riff-binding-controller-manager-metrics-service
+kubectl delete -n riff-system rolebinding/riff-binding-leader-election-rolebinding
+kubectl delete -n riff-system role/riff-binding-leader-election-role
+kubectl delete clusterrolebinding/riff-binding-manager-rolebinding
+kubectl delete clusterrolebinding/riff-binding-proxy-rolebinding
+kubectl delete clusterrole/riff-binding-manager-role
+kubectl delete clusterrole/riff-binding-proxy-role
+kubectl delete crd secretmappings.binding.projectriff.io
+----
+
