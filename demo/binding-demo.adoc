@@ -43,16 +43,20 @@ kubectl apply -f ./riff-binding-0.0.1-snapshot.yaml
 === Create application
 
 ----
-$ riff application create petclinic \
->   --git-repo https://github.com/spring-projects/spring-petclinic.git \
->   --git-revision master
+riff application create petclinic \
+  --git-repo https://github.com/spring-projects/spring-petclinic.git \
+  --git-revision master
+----
+----
 Created application "petclinic"
 ----
 
 === Install the database using Helm
 
 ----
-$ helm install --name petclinic --set mysqlDatabase=petclinic stable/mysql
+helm install --name petclinic --set mysqlDatabase=petclinic stable/mysql
+----
+----
 NAME:   petclinic
 LAST DEPLOYED: Mon Sep 23 16:07:43 2019
 NAMESPACE: default
@@ -119,24 +123,28 @@ To connect to your database directly from outside the K8s cluster:
 === Create SecretMapping
 
 ----
-$ riff binding secret-mapping create petclinic \
->   --binding-secret petclinic-binding \
->   --binding-prefix 'spring.datasource' \
->   --uri 'mysql://petclinic-mysql.default.svc.cluster.local:3306/petclinic' \
->   --secret-ref petclinic-mysql \
->   --username root \
->   --password-key mysql-root-password
+riff binding secret-mapping create petclinic \
+  --binding-secret petclinic-binding \
+  --binding-prefix 'spring.datasource' \
+  --uri 'mysql://petclinic-mysql.default.svc.cluster.local:3306/petclinic' \
+  --secret-ref petclinic-mysql \
+  --username root \
+  --password-key mysql-root-password
+----
+----
 secretmapping.binding.projectriff.io/petclinic created
 ----
 
 === Create core deployer
 
 ----
-$ riff core deployer create petclinic \
->   --application-ref petclinic \
->   --env SPRING_DATASOURCE_INITIALIZATION_MODE=always \
->   --binding-secret petclinic-binding:application-mysql \
->   --tail
+riff core deployer create petclinic \
+  --application-ref petclinic \
+  --env SPRING_DATASOURCE_INITIALIZATION_MODE=always \
+  --binding-secret petclinic-binding:application-mysql \
+  --tail
+----
+----
 Created deployer "petclinic"
 default/petclinic-deployer-6dc7958c-tmk2w[handler]: 
 default/petclinic-deployer-6dc7958c-tmk2w[handler]: 
@@ -190,7 +198,11 @@ default/petclinic-deployer-6dc7958c-tmk2w[handler]: 2019-09-23 20:16:59.941  INF
 === Set up port forwarding
 
 ----
-kubectl port-forward service/square-deployer 8080:80
+kubectl port-forward service/petclinic-deployer 8080:80
+----
+----
+Forwarding from 127.0.0.1:8080 -> 8080
+Forwarding from [::1]:8080 -> 8080
 ----
 
 === Access the Petclinic app
