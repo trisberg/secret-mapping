@@ -141,7 +141,8 @@ secretmapping.binding.projectriff.io/petclinic created
 riff core deployer create petclinic \
   --application-ref petclinic \
   --env SPRING_DATASOURCE_INITIALIZATION_MODE=always \
-  --binding-secret petclinic-binding:application-mysql \
+  --binding-type spring-boot \
+  --binding-secret mysql:petclinic-binding \
   --tail
 ----
 ----
